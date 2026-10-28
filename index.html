@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Teste rápido e em linguagem simples para descobrir quais partidos brasileiros combinam com o seu jeito de pensar.">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Qual Partido Combina Comigo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: uma coluna estreita, uma pergunta por tela, como a tela de uma urna; resultado com mapa 2D + ranking */
+:root{
+  --bg:#EEF1F4; --surface:#FFFFFF; --ink:#13202C; --muted:#5A6878; --line:#D5DCE4;
+  --accent:#1D5BD6; --accent-ink:#FFFFFF; --soft:#E2EAFB; --dot:#8592A2;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F151C; --surface:#18212B; --ink:#E7EDF3; --muted:#9AA8B7; --line:#2A3644;
+  --accent:#6E9BFF; --accent-ink:#0B1220; --soft:#1E2B44; --dot:#7C8999; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F151C; --surface:#18212B; --ink:#E7EDF3; --muted:#9AA8B7; --line:#2A3644;
+  --accent:#6E9BFF; --accent-ink:#0B1220; --soft:#1E2B44; --dot:#7C8999; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.12}
+h1{font-size:clamp(2rem,6vw,2.8rem);font-weight:800;letter-spacing:-.02em}
+h2{font-size:clamp(1.35rem,4.2vw,1.75rem);font-weight:700}
+h3{font-size:1.15rem;font-weight:700}
+p{margin:0}
+.eyebrow{font-size:.78rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}
+.muted{color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:14px}
+.btn{font:inherit;font-weight:700;border-radius:10px;padding:13px 20px;cursor:pointer;border:1.5px solid var(--line);background:var(--surface);color:var(--ink)}
+.btn:focus-visible,.opt:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted);padding-inline:6px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+ul.facts{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:6px}
+/* progresso */
+.progress{height:6px;background:var(--line);border-radius:99px;overflow:hidden}
+.progress span{display:block;height:100%;background:var(--accent);width:0;transition:width .25s}
+.qmeta{display:flex;justify-content:space-between;align-items:center;font-size:.9rem;color:var(--muted)}
+.tag{font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:99px;background:var(--soft);color:var(--accent)}
+.qtext{font-family:var(--display);font-size:clamp(1.35rem,4.6vw,1.8rem);font-weight:700;line-height:1.2;text-wrap:balance}
+.qhint{color:var(--muted);font-size:.95rem}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{font:inherit;text-align:left;display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.opt:hover{border-color:var(--accent)}
+.opt.sel{border-color:var(--accent);background:var(--soft)}
+.key{flex:none;width:28px;height:28px;border-radius:7px;display:grid;place-items:center;font-weight:700;font-size:.9rem;background:var(--bg);border:1px solid var(--line);font-variant-numeric:tabular-nums}
+.opt.sel .key{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.opt.skip{border-style:dashed;color:var(--muted)}
+/* resultado */
+.top{display:grid;grid-template-columns:1fr;gap:10px}
+.card{display:grid;grid-template-columns:auto 1fr auto;gap:4px 14px;align-items:center;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.card.first{border:2px solid var(--accent)}
+.num{grid-row:span 2;font-family:var(--display);font-weight:800;font-size:1.5rem;width:56px;height:56px;border-radius:10px;display:grid;place-items:center;background:var(--soft);color:var(--accent);font-variant-numeric:tabular-nums}
+.card .pct{grid-row:span 2;font-family:var(--display);font-weight:800;font-size:1.4rem;font-variant-numeric:tabular-nums}
+.card .desc{grid-column:2/3;font-size:.93rem;color:var(--muted);min-width:0}
+.card .name{min-width:0}
+.fed{font-size:.8rem;color:var(--muted)}
+.mapbox{overflow-x:auto}
+svg text{font-family:var(--body)}
+.rank{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.rank li{display:grid;grid-template-columns:110px 1fr 44px;gap:10px;align-items:center;font-size:.92rem}
+.bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--dot)}
+.rank li.hi .bar span{background:var(--accent)}
+.rank .v{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.axes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.axis{padding:14px;border-radius:10px;background:var(--bg);display:flex;flex-direction:column;gap:4px}
+.axis b{font-family:var(--display);font-size:1.1rem}
+small{font-size:.85rem}
+.fmt{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fmtbtn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left}
+.fmtbtn small{font-weight:400;color:var(--muted);font-variant-numeric:tabular-nums}
+.fmtbtn.sel{border-color:var(--accent);background:var(--soft)}
+.preview{display:flex;justify-content:center;background:var(--bg);border-radius:10px;padding:14px}
+.preview img{max-height:440px;width:auto;max-width:100%;border-radius:8px;box-shadow:0 4px 18px rgba(0,0,0,.12)}
+@media (max-width:460px){.axes{grid-template-columns:1fr}.rank li{grid-template-columns:92px 1fr 40px}}
+@media (prefers-reduced-motion:reduce){.progress span{transition:none}}
+</style>
+
+<div class="wrap">
+
+<!-- INTRO -->
+<section id="intro" class="wrap" style="gap:20px">
+  <div class="eyebrow">Teste rápido · 15 perguntas · cerca de 3 minutos</div>
+  <h1>Qual partido combina com o seu jeito de pensar?</h1>
+  <p>Você vai ler frases sobre temas do dia a dia e dizer o quanto concorda. Não existe resposta certa ou errada. No final, mostramos os partidos brasileiros que mais se aproximam das suas respostas.</p>
+  <div class="panel">
+    <h3>Como funciona</h3>
+    <ul class="facts">
+      <li>Cada frase fala de um assunto: dinheiro público, trabalho, segurança, família, meio ambiente.</li>
+      <li>Escolha de "Concordo muito" a "Discordo muito". Se não tiver opinião, pule.</li>
+      <li>O resultado mostra duas coisas: como você vê a <b>economia</b> e como vê os <b>costumes</b>.</li>
+    </ul>
+  </div>
+  <div class="row"><button class="btn primary" id="start">Começar o teste</button></div>
+  <p class="muted"><small>As posições dos partidos são aproximadas, baseadas em programas oficiais e no histórico de votações. Todo partido tem alas internas diferentes. Use o resultado como ponto de partida para conhecer melhor cada um.</small></p>
+</section>
+
+<!-- PERGUNTA -->
+<section id="quiz" class="wrap" hidden>
+  <div class="qmeta"><span id="count">Pergunta 1 de 15</span><span class="tag" id="theme">Economia</span></div>
+  <div class="progress"><span id="bar"></span></div>
+  <div class="panel">
+    <p class="qtext" id="qtext"></p>
+    <p class="qhint" id="qhint"></p>
+    <div class="opts" id="opts"></div>
+  </div>
+  <div class="row" style="justify-content:space-between">
+    <button class="btn ghost" id="back">← Voltar</button>
+    <span class="muted"><small>Dica: use as teclas 1 a 5</small></span>
+  </div>
+</section>
+
+<!-- RESULTADO -->
+<section id="result" class="wrap" hidden>
+  <div class="eyebrow">Seu resultado</div>
+  <h1 id="rtitle">Você combina mais com…</h1>
+  <div class="top" id="top3"></div>
+
+  <div class="panel" id="sharePanel">
+    <h3>Compartilhe seu resultado</h3>
+    <p class="muted">Gere uma imagem pronta para o Instagram com o resumo do seu teste.</p>
+    <div class="fmt" role="group" aria-label="Formato da imagem">
+      <button class="btn fmtbtn sel" id="fmtFeed" data-f="feed"><b>Feed</b><small>4:5 · 1080 × 1350</small></button>
+      <button class="btn fmtbtn" id="fmtStory" data-f="story"><b>Story</b><small>9:16 · 1080 × 1920</small></button>
+    </div>
+    <div class="preview"><img id="shareImg" alt="Prévia da imagem do seu resultado"></div>
+    <div class="row"><button class="btn primary" id="saveImg">Baixar imagem</button><button class="btn" id="copyTxt">Copiar texto do resultado</button></div>
+    <p class="muted" id="shareMsg" aria-live="polite"><small></small></p>
+  </div>
+
+  <div class="panel">
+    <h3>Onde você está no mapa</h3>
+    <div class="axes">
+      <div class="axis"><span class="eyebrow">Economia</span><b id="econLabel"></b><small class="muted" id="econText"></small></div>
+      <div class="axis"><span class="eyebrow">Costumes</span><b id="socLabel"></b><small class="muted" id="socText"></small></div>
+    </div>
+    <div class="mapbox"><svg id="map" viewBox="0 0 400 400" width="100%" style="max-width:520px;display:block;margin:0 auto" role="img" aria-label="Mapa com a sua posição e a dos partidos"></svg></div>
+  </div>
+
+  <div class="panel">
+    <h3>Todos os partidos</h3>
+    <ol class="rank" id="rank"></ol>
+  </div>
+
+  <div class="panel">
+    <h3>Quer se filiar? O caminho básico</h3>
+    <ul class="facts">
+      <li>É preciso ser eleitor, com título em dia e direitos políticos ativos.</li>
+      <li>Procure o diretório do partido na sua cidade ou o site oficial dele. Muitos aceitam a ficha de filiação on-line.</li>
+      <li>Antes, leia o estatuto e o programa do partido e veja como os representantes dele votam.</li>
+      <li>Depois de filiado, você pode conferir sua filiação no site do TSE.</li>
+    </ul>
+  </div>
+  <div class="row"><button class="btn primary" id="again">Refazer o teste</button><button class="btn" id="review">Revisar respostas</button></div>
+  <p class="muted"><small>Partidos em federação (como Brasil da Esperança, PSOL-Rede e União Progressista) concorrem juntos, mas continuam sendo partidos separados com programas próprios.</small></p>
+</section>
+</div>
+
+<script>
+// econ: -1 = mais Estado, +1 = mais mercado | soc: -1 = progressista, +1 = conservador
+const Q=[
+ {t:"Quem é muito rico deveria pagar mais imposto, e esse dinheiro deveria ir para saúde e educação.",h:"Ex.: imposto sobre grandes fortunas ou heranças altas.",a:"econ",d:-1,theme:"Economia"},
+ {t:"Casais do mesmo sexo devem ter exatamente os mesmos direitos que qualquer outro casal.",h:"Casamento, adoção, herança.",a:"soc",d:-1,theme:"Costumes"},
+ {t:"Empresas como Correios e Petrobras funcionariam melhor se fossem vendidas para empresas privadas.",h:"Isso se chama privatização.",a:"econ",d:1,theme:"Economia"},
+ {t:"Penas mais duras e mais polícia nas ruas são o melhor caminho para diminuir a violência.",h:"",a:"soc",d:1,theme:"Segurança"},
+ {t:"Programas como o Bolsa Família são importantes e deveriam ser ampliados.",h:"Ajuda em dinheiro do governo para famílias de baixa renda.",a:"econ",d:-1,theme:"Economia"},
+ {t:"A família tradicional (pai, mãe e filhos) deve ser a base para as leis e para a educação nas escolas.",h:"",a:"soc",d:1,theme:"Costumes"},
+ {t:"Menos regras e burocracia para empresas ajudam mais o trabalhador do que novas leis trabalhistas.",h:"A ideia é que, com menos custo, as empresas contratariam mais.",a:"econ",d:1,theme:"Trabalho"},
+ {t:"Proteger a Amazônia deve vir antes de abrir novas áreas para plantação, gado ou mineração.",h:"",a:"soc",d:-1,theme:"Meio ambiente"},
+ {t:"O governo deve gastar só o que arrecada, mesmo que precise cortar alguns programas.",h:"Isso é chamado de responsabilidade fiscal.",a:"econ",d:1,theme:"Economia"},
+ {t:"Facilitar a compra e o porte de armas deixaria as pessoas comuns mais seguras.",h:"",a:"soc",d:1,theme:"Segurança"},
+ {t:"Hospitais, escolas e universidades públicas e gratuitas devem ser prioridade, mesmo que custem mais impostos.",h:"",a:"econ",d:-1,theme:"Serviços públicos"},
+ {t:"Cotas para pessoas negras, indígenas e estudantes de escola pública em universidades e concursos são justas.",h:"",a:"soc",d:-1,theme:"Igualdade"},
+ {t:"Quem quer abrir um negócio deveria ter menos impostos, mesmo que o governo arrecade menos.",h:"",a:"econ",d:1,theme:"Economia"},
+ {t:"Valores religiosos devem ter peso nas decisões do governo e do Congresso.",h:"",a:"soc",d:1,theme:"Costumes"},
+ {t:"Quem é pego com uma pequena quantidade de maconha para uso próprio não deveria ser preso.",h:"",a:"soc",d:-1,theme:"Costumes"}
+];
+const OPTS=[["Concordo muito",1],["Concordo",.5],["Neutro / em dúvida",0],["Discordo",-.5],["Discordo muito",-1]];
+// Posições aproximadas (média de programa e votações). Numero = número de legenda.
+const P=[
+ {s:"PSOL",n:50,e:-.9,c:-.9,f:"Federação PSOL-Rede",d:"Esquerda. Defende mais Estado na economia, taxação dos mais ricos e pautas de direitos e diversidade."},
+ {s:"PCdoB",n:65,e:-.85,c:-.55,f:"Federação Brasil da Esperança",d:"Esquerda. Ligado a sindicatos e ao movimento estudantil; defende papel forte do Estado."},
+ {s:"PT",n:13,e:-.7,c:-.45,f:"Federação Brasil da Esperança",d:"Centro-esquerda/esquerda. Programas sociais, valorização do salário mínimo e investimento público."},
+ {s:"PDT",n:12,e:-.6,c:-.25,f:"",d:"Centro-esquerda trabalhista. Foco em educação pública e desenvolvimento nacional."},
+ {s:"Rede",n:18,e:-.45,c:-.7,f:"Federação PSOL-Rede",d:"Centro-esquerda com foco em sustentabilidade, meio ambiente e transparência."},
+ {s:"PV",n:43,e:-.35,c:-.6,f:"Federação Brasil da Esperança",d:"Pauta ambiental como eixo central, com posições de centro-esquerda."},
+ {s:"PSB",n:40,e:-.35,c:-.35,f:"",d:"Centro-esquerda. Socialismo democrático, com alas moderadas e diálogo com o centro."},
+ {s:"Cidadania",n:23,e:.05,c:-.3,f:"",d:"Centro. Moderado na economia e mais aberto em costumes."},
+ {s:"Solidariedade",n:77,e:-.05,c:.1,f:"",d:"Centro. Nasceu ligado ao movimento sindical; pragmático nas alianças."},
+ {s:"PSDB",n:45,e:.35,c:-.05,f:"",d:"Centro/centro-direita. Social-democracia com economia de mercado e controle de gastos."},
+ {s:"MDB",n:15,e:.2,c:.2,f:"",d:"Centro. Partido grande e diverso, presente em quase todos os governos."},
+ {s:"PSD",n:55,e:.3,c:.25,f:"",d:"Centro/centro-direita. Pragmático, com forte presença em prefeituras."},
+ {s:"Avante",n:70,e:.15,c:.3,f:"",d:"Centro. Partido de porte médio, com posições moderadas."},
+ {s:"Podemos",n:20,e:.4,c:.3,f:"",d:"Centro-direita. Discurso de renovação, combate à corrupção e economia de mercado."},
+ {s:"União Brasil",n:44,e:.5,c:.45,f:"Federação União Progressista",d:"Centro-direita/direita. Economia liberal e posições mais conservadoras em costumes."},
+ {s:"PP",n:11,e:.5,c:.55,f:"Federação União Progressista",d:"Centro-direita/direita. Forte no agronegócio e no Congresso."},
+ {s:"Republicanos",n:10,e:.4,c:.75,f:"",d:"Direita. Conservador em costumes, com forte base religiosa."},
+ {s:"PL",n:22,e:.6,c:.85,f:"",d:"Direita. Conservador em costumes, defende segurança mais dura e acesso a armas."},
+ {s:"Novo",n:30,e:.95,c:.35,f:"",d:"Direita liberal. Estado menor, privatizações, menos impostos e menos gastos públicos."}
+];
+const ans=new Array(Q.length).fill(undefined);
+let i=0;
+const $=id=>document.getElementById(id);
+function show(id){["intro","quiz","result"].forEach(s=>$(s).hidden=s!==id);window.scrollTo(0,0)}
+function render(){
+  const q=Q[i];
+  $("count").textContent=`Pergunta ${i+1} de ${Q.length}`;
+  $("theme").textContent=q.theme;
+  $("bar").style.width=(i/Q.length*100)+"%";
+  $("qtext").textContent=q.t;
+  $("qhint").textContent=q.h; $("qhint").hidden=!q.h;
+  const o=$("opts"); o.innerHTML="";
+  OPTS.forEach(([lab,v],k)=>{
+    const b=document.createElement("button");
+    b.className="opt"+(ans[i]===v?" sel":""); b.id="opt"+k;
+    b.innerHTML=`<span class="key">${k+1}</span><span>${lab}</span>`;
+    b.onclick=()=>pick(v); o.appendChild(b);
+  });
+  const s=document.createElement("button");
+  s.className="opt skip"+(ans[i]===null?" sel":""); s.id="optskip";
+  s.innerHTML=`<span class="key">–</span><span>Não sei / prefiro pular</span>`;
+  s.onclick=()=>pick(null); o.appendChild(s);
+  $("back").style.visibility=i===0?"hidden":"visible";
+}
+function pick(v){ans[i]=v; render(); setTimeout(()=>{ if(i<Q.length-1){i++;render()} else finish() },180)}
+function axis(a){let s=0,n=0;Q.forEach((q,k)=>{if(q.a===a&&ans[k]!=null&&ans[k]!==undefined){s+=ans[k]*q.d;n++}});return n?s/n:0}
+function lab(v,neg,pos){const a=Math.abs(v);if(a<.15)return"Equilíbrio";return (a>.6?"Bem ":"")+(v<0?neg:pos)}
+function finish(){
+  const e=axis("econ"),c=axis("soc");
+  const scored=P.map(p=>{const dist=Math.hypot(p.e-e,p.c-c);return{...p,pct:Math.round(Math.max(0,1-dist/2.2)*100)}}).sort((a,b)=>b.pct-a.pct);
+  $("rtitle").textContent=`Você combina mais com ${scored[0].s}`;
+  $("top3").innerHTML=scored.slice(0,3).map((p,k)=>`
+    <div class="card${k===0?" first":""}">
+      <div class="num">${p.n}</div>
+      <div class="name"><h3>${p.s}</h3>${p.f?`<div class="fed">${p.f}</div>`:""}</div>
+      <div class="pct">${p.pct}%</div>
+      <p class="desc">${p.d}</p>
+    </div>`).join("");
+  $("econLabel").textContent=lab(e,"mais Estado","mais mercado");
+  $("econText").textContent=e<-.15?"Você tende a querer o governo mais presente: serviços públicos, programas sociais e impostos maiores para quem tem mais.":e>.15?"Você tende a preferir menos governo na economia: menos impostos, menos burocracia e mais espaço para empresas.":"Você mistura ideias dos dois lados quando o assunto é dinheiro e governo.";
+  $("socLabel").textContent=lab(c,"progressista","conservador");
+  $("socText").textContent=c<-.15?"Você tende a valorizar direitos individuais, diversidade e mudanças nos costumes.":c>.15?"Você tende a valorizar tradição, família, religião e mais rigor na segurança.":"Você fica no meio do caminho em temas de costumes e segurança.";
+  drawMap(e,c,scored);
+  $("rank").innerHTML=scored.map((p,k)=>`<li class="${k<3?"hi":""}"><span>${p.s}</span><span class="bar"><span style="width:${p.pct}%"></span></span><span class="v">${p.pct}%</span></li>`).join("");
+  $("bar").style.width="100%";
+  last={e,c,scored,econ:$("econLabel").textContent,soc:$("socLabel").textContent};
+  show("result");
+  renderShare();
+}
+
+// ---------- Imagem para compartilhar ----------
+let last=null, fmt="feed", lastBlob=null;
+const IMG={bg:"#EEF1F4",card:"#FFFFFF",ink:"#13202C",muted:"#5A6878",line:"#D5DCE4",accent:"#1D5BD6",soft:"#E2EAFB",dot:"#9AA5B3"};
+const DF='"Bricolage Grotesque", "Segoe UI", sans-serif', BF='"Atkinson Hyperlegible", "Segoe UI", sans-serif';
+function rr(x,y,w,h,r,ctx){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function wrap(ctx,text,x,y,maxW,lh,maxLines){const words=text.split(" ");let line="",lines=[];for(const w of words){const t=line?line+" "+w:w;if(ctx.measureText(t).width>maxW&&line){lines.push(line);line=w}else line=t}if(line)lines.push(line);lines=lines.slice(0,maxLines);lines.forEach((l,k)=>ctx.fillText(l,x,y+k*lh));return lines.length*lh}
+async function drawCard(f){
+  try{await Promise.all([document.fonts.load('800 100px "Bricolage Grotesque"'),document.fonts.load('700 60px "Bricolage Grotesque"'),document.fonts.load('400 30px "Atkinson Hyperlegible"'),document.fonts.load('700 30px "Atkinson Hyperlegible"')])}catch(_){}
+  const W=1080,H=f==="story"?1920:1350,M=84,story=f==="story";
+  const cv=document.createElement("canvas");cv.width=W;cv.height=H;const x=cv.getContext("2d");
+  x.fillStyle=IMG.bg;x.fillRect(0,0,W,H);
+  x.fillStyle=IMG.accent;x.fillRect(0,0,W,14);
+  let y=story?220:110;
+  const {scored}=last,p=scored[0];
+  x.textBaseline="alphabetic";
+  x.fillStyle=IMG.muted;x.font=`700 28px ${BF}`;x.letterSpacing="4px";x.fillText("MEU RESULTADO NO TESTE",M,y);x.letterSpacing="0px";
+  y+=78;x.fillStyle=IMG.ink;x.font=`700 60px ${DF}`;x.fillText("Combino mais com",M,y);
+  // cartão principal
+  y+=40;const ch=story?380:360;
+  x.fillStyle=IMG.card;rr(M,y,W-2*M,ch,28,x);x.fill();x.lineWidth=4;x.strokeStyle=IMG.accent;x.stroke();
+  const bx=M+44,by=y+44;x.fillStyle=IMG.soft;rr(bx,by,150,150,20,x);x.fill();
+  x.fillStyle=IMG.accent;x.font=`800 76px ${DF}`;x.textAlign="center";x.fillText(String(p.n),bx+75,by+102);x.textAlign="left";
+  x.fillStyle=IMG.ink;let fs=p.s.length>9?76:100;x.font=`800 ${fs}px ${DF}`;x.fillText(p.s,bx+186,by+92);
+  x.fillStyle=IMG.accent;x.font=`800 54px ${DF}`;x.fillText(p.pct+"% de afinidade",bx+186,by+150);
+  x.fillStyle=IMG.muted;x.font=`400 32px ${BF}`;wrap(x,p.d,bx,by+226,W-2*M-88,44,story?3:2);
+  y+=ch+56;
+  // 2º e 3º
+  x.fillStyle=IMG.muted;x.font=`700 26px ${BF}`;x.letterSpacing="3px";x.fillText("TAMBÉM COMBINO COM",M,y);x.letterSpacing="0px";y+=30;
+  scored.slice(1,3).forEach(q=>{
+    y+=48;x.fillStyle=IMG.ink;x.font=`700 40px ${DF}`;x.fillText(q.s,M,y);
+    x.textAlign="right";x.fillStyle=IMG.ink;x.fillText(q.pct+"%",W-M,y);x.textAlign="left";
+    y+=24;x.fillStyle=IMG.line;rr(M,y,W-2*M,14,7,x);x.fill();x.fillStyle=IMG.accent;rr(M,y,(W-2*M)*q.pct/100,14,7,x);x.fill();y+=18;
+  });
+  y+=50;
+  // eixos
+  const aw=(W-2*M-24)/2,ah=150;
+  [["ECONOMIA",last.econ],["COSTUMES",last.soc]].forEach(([k,v],j)=>{
+    const ax=M+j*(aw+24);x.fillStyle=IMG.card;rr(ax,y,aw,ah,22,x);x.fill();
+    x.fillStyle=IMG.muted;x.font=`700 24px ${BF}`;x.letterSpacing="3px";x.fillText(k,ax+32,y+52);x.letterSpacing="0px";
+    x.fillStyle=IMG.ink;x.font=`700 42px ${DF}`;x.fillText(v.charAt(0).toUpperCase()+v.slice(1),ax+32,y+110);
+  });
+  y+=ah;
+  // mapa (só no Story, onde cabe)
+  if(story){
+    y+=40;const S=400,mx=(W-S)/2,my=y,pad=34;
+    x.fillStyle=IMG.card;rr(mx,my,S,S,24,x);x.fill();
+    x.strokeStyle=IMG.line;x.lineWidth=2;x.beginPath();x.moveTo(mx+S/2,my+pad);x.lineTo(mx+S/2,my+S-pad);x.moveTo(mx+pad,my+S/2);x.lineTo(mx+S-pad,my+S/2);x.stroke();
+    const X=v=>mx+pad+(v+1)/2*(S-2*pad),Y=v=>my+pad+(1-(v+1)/2)*(S-2*pad);
+    x.fillStyle=IMG.muted;x.font=`400 22px ${BF}`;x.textAlign="center";
+    x.fillText("Conservador",mx+S/2,my+pad-8);x.fillText("Progressista",mx+S/2,my+S-pad+28);
+    x.textAlign="left";x.fillText("Estado",mx+pad+6,my+S/2-12);x.textAlign="right";x.fillText("Mercado",mx+S-pad-6,my+S/2-12);x.textAlign="left";
+    const top=new Set(scored.slice(0,3).map(q=>q.s));
+    P.forEach(q=>{x.fillStyle=top.has(q.s)?IMG.accent:IMG.dot;x.beginPath();x.arc(X(q.e),Y(q.c),top.has(q.s)?10:7,0,7);x.fill();if(top.has(q.s)){x.fillStyle=IMG.ink;x.font=`700 22px ${BF}`;x.fillText(q.s,X(q.e)+14,Y(q.c)+8)}});
+    x.strokeStyle=IMG.ink;x.lineWidth=5;x.beginPath();x.arc(X(last.e),Y(last.c),18,0,7);x.stroke();x.fillStyle=IMG.ink;x.beginPath();x.arc(X(last.e),Y(last.c),6,0,7);x.fill();
+    x.font=`700 26px ${BF}`;x.textAlign="center";x.fillText("Eu",X(last.e),Y(last.c)-28);x.textAlign="left";
+  }
+  // rodapé
+  const fy=H-(story?200:90);
+  x.fillStyle=IMG.ink;x.font=`700 40px ${DF}`;x.fillText("Faça o teste e descubra o seu!",M,fy-44);
+  x.fillStyle=IMG.muted;x.font=`400 26px ${BF}`;x.fillText("Resultado aproximado. Não é recomendação de voto.",M,fy);
+  return new Promise(r=>cv.toBlob(b=>r(b),"image/png"));
+}
+async function renderShare(){
+  if(!last)return;
+  ["fmtFeed","fmtStory"].forEach(id=>$(id).classList.toggle("sel",$(id).dataset.f===fmt));
+  lastBlob=await drawCard(fmt);
+  const img=$("shareImg");if(img.dataset.url)URL.revokeObjectURL(img.dataset.url);
+  const u=URL.createObjectURL(lastBlob);img.src=u;img.dataset.url=u;
+}
+function msg(t){$("shareMsg").firstElementChild.textContent=t}
+$("fmtFeed").onclick=()=>{fmt="feed";msg("");renderShare()};
+$("fmtStory").onclick=()=>{fmt="story";msg("");renderShare()};
+let dl=null;
+(async()=>{try{dl=await window.claude?.use?.("downloads")}catch(_){dl=null}
+  })();
+$("saveImg").onclick=async()=>{
+  if(!lastBlob)return;
+  if(!dl){const a=document.createElement("a");a.href=URL.createObjectURL(lastBlob);a.download=`meu-resultado-partido-${fmt}.png`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);msg("Imagem baixada. Se nada aconteceu no celular, toque e segure a imagem para salvar.");return}
+  try{await dl.save({filename:`meu-resultado-partido-${fmt}.png`,data:lastBlob});msg("Imagem salva. É só postar no Instagram!")}
+  catch(err){if(err&&err.code==="declined")msg("Download cancelado.");else if(err&&err.code==="rate_limited")msg("Já tem um download aberto. Confirme ou feche e tente de novo.");else msg("Não deu para baixar aqui. Toque e segure a imagem para salvar.")}
+};
+$("copyTxt").onclick=async()=>{
+  if(!last)return;const s=last.scored;
+  const t=`Fiz o teste "Qual partido combina comigo?" e meu resultado foi ${s[0].s} (${s[0].pct}%), seguido de ${s[1].s} (${s[1].pct}%) e ${s[2].s} (${s[2].pct}%). Na economia: ${last.econ}. Nos costumes: ${last.soc}. Faça o seu também!`;
+  try{await navigator.clipboard.writeText(t);msg("Texto copiado!")}catch(_){msg(t)}
+};
+function drawMap(e,c,scored){
+  const S=400,m=40,X=v=>m+(v+1)/2*(S-2*m),Y=v=>m+(1-(v+1)/2)*(S-2*m);
+  const top=new Set(scored.slice(0,3).map(p=>p.s));
+  let g=`<rect x="${m}" y="${m}" width="${S-2*m}" height="${S-2*m}" rx="10" fill="var(--bg)" stroke="var(--line)"/>
+  <line x1="${S/2}" y1="${m}" x2="${S/2}" y2="${S-m}" stroke="var(--line)"/><line x1="${m}" y1="${S/2}" x2="${S-m}" y2="${S/2}" stroke="var(--line)"/>
+  <text x="${S/2}" y="${m-12}" text-anchor="middle" font-size="12" fill="var(--muted)">Conservador</text>
+  <text x="${S/2}" y="${S-m+22}" text-anchor="middle" font-size="12" fill="var(--muted)">Progressista</text>
+  <text x="${m-6}" y="${S/2}" text-anchor="middle" font-size="12" fill="var(--muted)" transform="rotate(-90 ${m-14} ${S/2})">Mais Estado</text>
+  <text x="${S-m+6}" y="${S/2}" text-anchor="middle" font-size="12" fill="var(--muted)" transform="rotate(90 ${S-m+14} ${S/2})">Mais mercado</text>`;
+  P.forEach(p=>{const hi=top.has(p.s);g+=`<circle cx="${X(p.e)}" cy="${Y(p.c)}" r="${hi?6:4.5}" fill="${hi?"var(--accent)":"var(--dot)"}" opacity="${hi?1:.75}"/>
+    <text x="${X(p.e)+8}" y="${Y(p.c)+4}" font-size="${hi?12:10.5}" font-weight="${hi?700:400}" fill="${hi?"var(--ink)":"var(--muted)"}">${p.s}</text>`});
+  g+=`<circle cx="${X(e)}" cy="${Y(c)}" r="11" fill="none" stroke="var(--ink)" stroke-width="2.5"/><circle cx="${X(e)}" cy="${Y(c)}" r="4" fill="var(--ink)"/>
+  <text x="${X(e)}" y="${Y(c)-17}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">Você</text>`;
+  $("map").innerHTML=g;
+}
+$("start").onclick=()=>{i=0;render();show("quiz")};
+$("back").onclick=()=>{if(i>0){i--;render()}};
+$("again").onclick=()=>{ans.fill(undefined);i=0;render();show("quiz")};
+$("review").onclick=()=>{i=0;render();show("quiz")};
+document.addEventListener("keydown",ev=>{if($("quiz").hidden)return;const k=+ev.key;if(k>=1&&k<=5)pick(OPTS[k-1][1]);if(ev.key==="Backspace"&&i>0){i--;render()}});
+</script>
+
+</body>
+</html>
